@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VEYORU ESP32 Display Lab</title>
+  <style>
+    :root{--bg:#070908;--panel:#101411;--line:#253027;--ink:#f4f7f2;--muted:#94a097;--acid:#c9ff4b;--cyan:#71e7ff;--red:#ff6f73}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% -10%,#1a2518 0,transparent 34%),var(--bg);color:var(--ink);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;min-height:100vh}
+    button,input,textarea,select{font:inherit} button{cursor:pointer}.shell{max-width:1440px;margin:auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}.brand{display:flex;align-items:center;gap:13px}.mark{width:42px;height:42px;border:1px solid #43513f;border-radius:50%;display:grid;place-items:center;color:var(--acid);font-weight:900;letter-spacing:-1px;box-shadow:0 0 30px #c9ff4b18}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--acid);text-transform:uppercase}.brand h1{font-size:21px;margin:2px 0 0;letter-spacing:-.03em}.status{display:flex;gap:10px;align-items:center;color:var(--muted)}.dot{width:9px;height:9px;border-radius:50%;background:#68736b}.dot.on{background:var(--acid);box-shadow:0 0 14px var(--acid)}
+    .grid{display:grid;grid-template-columns:minmax(420px,.9fr) minmax(520px,1.1fr);gap:18px}.card{background:linear-gradient(145deg,#121713,#0d110e);border:1px solid var(--line);border-radius:22px;box-shadow:0 20px 70px #0008}.previewCard{padding:28px;min-height:690px;display:flex;flex-direction:column}.cardHead{display:flex;justify-content:space-between;align-items:start;margin-bottom:22px}.cardHead h2{font-size:17px;margin:0}.cardHead p{margin:5px 0 0;color:var(--muted)}.tag{font-size:11px;color:var(--acid);padding:5px 9px;border:1px solid #4a5d36;border-radius:999px}
+    .watchWrap{flex:1;display:grid;place-items:center;min-height:470px}.watch{position:relative;width:min(70vw,466px);aspect-ratio:1;border-radius:50%;background:#020302;border:12px solid #171b18;box-shadow:0 0 0 2px #424b43,0 40px 90px #000, inset 0 0 80px #000;overflow:hidden}.screen{position:absolute;inset:0;border-radius:50%;padding:48px 48px 42px;display:flex;flex-direction:column;align-items:center;text-align:center;background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--active) 13%,transparent),transparent 45%),#020302}.screen:after{content:"";position:absolute;inset:12px;border:1px solid color-mix(in srgb,var(--active) 28%,transparent);border-radius:50%;pointer-events:none}.screenTop{display:flex;width:72%;justify-content:space-between;color:#a8b0aa;font-size:12px;z-index:1}.orb{width:112px;height:112px;border-radius:50%;margin:35px 0 22px;border:1px solid color-mix(in srgb,var(--active) 50%,#273128);background:radial-gradient(circle at 38% 33%,#fff 0 2%,var(--active) 4%,color-mix(in srgb,var(--active) 22%,#020302) 32%,#020302 72%);box-shadow:0 0 42px color-mix(in srgb,var(--active) 28%,transparent),inset 0 0 34px #000;z-index:1}.watchTitle{font-size:35px;line-height:1;letter-spacing:-.055em;font-weight:700;z-index:1}.watchBody{margin-top:12px;color:#b1bbb3;max-width:280px;white-space:pre-line;z-index:1}.metrics{display:flex;gap:8px;margin-top:auto;z-index:1}.metric{padding:7px 12px;border-radius:999px;background:#101511;border:1px solid #283129;color:#cbd2cc;font-size:12px}.crown{position:absolute;right:-25px;top:196px;width:26px;height:67px;border-radius:0 9px 9px 0;background:#343a35;border:1px solid #59615a}
+    .screenNav{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:18px}.screenNav button,.quick button,.btn{border:1px solid #303a31;background:#151b16;color:#c8d0ca;border-radius:11px;padding:9px 8px}.screenNav button.active,.screenNav button:hover,.quick button:hover{border-color:#789443;color:var(--acid)}
+    .right{display:grid;gap:18px}.connect{padding:22px}.connectRow{display:flex;gap:10px;flex-wrap:wrap}.btn{padding:11px 15px;font-weight:650}.btn.primary{background:var(--acid);border-color:var(--acid);color:#10140e}.btn.danger{border-color:#66383b;color:#ff9da1}.btn:disabled{opacity:.4;cursor:not-allowed}.notice{margin-top:13px;border-radius:12px;background:#0a0d0b;border:1px solid #252d26;padding:11px 13px;color:var(--muted)}
+    .editor{padding:22px}.tabs{display:flex;gap:6px;margin-bottom:12px}.tabs button{border:0;background:transparent;color:var(--muted);padding:8px 10px;border-bottom:2px solid transparent}.tabs button.active{color:var(--ink);border-color:var(--acid)}textarea{width:100%;min-height:215px;resize:vertical;background:#050706;border:1px solid #29322a;border-radius:14px;color:#d6f8bd;padding:15px;font:13px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none}.editorActions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:11px}.hint{font-size:12px;color:var(--muted)}
+    .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:13px}.console{padding:22px}.log{height:128px;overflow:auto;background:#050706;border:1px solid #252d26;border-radius:13px;padding:12px;color:#9eb0a1;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}.rx{color:var(--cyan)}.tx{color:var(--acid)}.err{color:var(--red)}
+    .foot{color:#78837a;text-align:center;margin-top:18px;font-size:12px}.toast{position:fixed;right:22px;bottom:22px;background:#182118;border:1px solid #50613b;color:#eaffc1;padding:12px 16px;border-radius:12px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}
+    @media(max-width:1020px){.grid{grid-template-columns:1fr}.previewCard{min-height:auto}.watch{width:min(78vw,466px)}.screenNav{grid-template-columns:repeat(3,1fr)}}@media(max-width:560px){.shell{padding:14px}.top{align-items:flex-start}.status{font-size:12px}.previewCard,.connect,.editor,.console{padding:16px}.watch{width:88vw}.screen{padding:40px}.quick{grid-template-columns:repeat(2,1fr)}}
+    .centerMeta{color:#e9f5e8;font-size:12px;letter-spacing:.08em;margin-top:8px;z-index:1}.orb{cursor:pointer}.orb.listening{animation:pulse 1s infinite;box-shadow:0 0 60px color-mix(in srgb,var(--active) 65%,transparent),inset 0 0 34px #000}@keyframes pulse{50%{transform:scale(1.08);opacity:.75}}.watchAction{margin-top:10px;border:1px solid color-mix(in srgb,var(--active) 55%,#273128);border-radius:999px;background:#101511;color:var(--active);padding:6px 13px;font-size:11px;letter-spacing:.08em;z-index:1;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="top"><div class="brand"><div class="mark">V1</div><div><div class="eyebrow">Hardware Studio</div><h1>VEYORU ESP32 Display Lab</h1></div></div><div class="status"><span id="dot" class="dot"></span><span id="connectionText">Preview mode · board not connected</span></div></header>
+    <section class="grid">
+      <article class="card previewCard">
+        <div class="cardHead"><div><h2>466 × 466 AMOLED preview</h2><p>The browser and physical watch use the same state.</p></div><span class="tag">1.43″ ROUND</span></div>
+        <div class="watchWrap"><div class="watch" id="watch"><div id="watchScreen" class="screen" style="--active:#c9ff4b"><div class="screenTop"><span id="time">09:41</span><span id="battery">82%</span></div><div id="centerMeta" class="centerMeta">09:41 · 82% CHARGE</div><div id="orb" class="orb" title="Tap to listen"></div><div id="watchTitle" class="watchTitle">VEYORU</div><div id="watchBody" class="watchBody">Your AI, one gesture away.</div><button id="watchAction" class="watchAction">TAP TO LISTEN</button><div class="metrics"><span id="statusChip" class="metric">READY</span><span id="hrChip" class="metric">72 BPM</span></div></div><div class="crown"></div></div></div>
+        <nav class="screenNav" id="screenNav"></nav>
+      </article>
+      <div class="right">
+        <article class="card connect"><div class="cardHead"><div><h2>USB connection</h2><p>Chrome or Edge · 115200 baud · USB CDC</p></div></div><div class="connectRow"><button id="connectBtn" class="btn primary">Connect ESP32-S3</button><button id="disconnectBtn" class="btn" disabled>Disconnect</button><button id="syncBtn" class="btn" disabled>Send current screen</button><button id="demoBtn" class="btn">Run browser demo</button></div><div class="connectRow" style="margin-top:10px"><input id="askText" class="btn" style="flex:1;min-width:220px;text-align:left" value="What should we build today?" aria-label="Assistant question"><button id="listenBtn" class="btn primary">Listen / Ask</button><input id="llmEndpoint" class="btn" style="flex:1;min-width:220px;text-align:left" placeholder="LLM gateway (optional)" aria-label="LLM gateway endpoint"></div><div id="supportNotice" class="notice">Tap the orb, use Listen / Ask, or swipe the watch left/right. Add a server-side gateway URL to use a full LLM; without one the lab uses a local demo reply.</div></article>
+        <article class="card editor">
+          <div class="cardHead"><div><h2>VEYORU Script</h2><p>Edit, run locally, then send the result to the watch.</p></div><span class="tag">NO REFLASH</span></div>
+          <textarea id="code" spellcheck="false">screen("assistant");
+title("Ask VEYORU");
+body("What should we build today?");
+status("LISTENING");
+heartRate(74);
+battery(82);
+accent("#71E7FF");
+send();</textarea>
+          <div class="editorActions"><span class="hint">Commands: screen, title, body, status, heartRate, battery, accent, send</span><div><button id="runBtn" class="btn primary">Run script</button></div></div>
+          <div class="quick"><button data-quick="hello">Hello</button><button data-quick="focus">Focus timer</button><button data-quick="health">Health</button><button data-quick="alert">AI reply</button></div>
+        </article>
+        <article class="card console"><div class="cardHead"><div><h2>Serial monitor</h2><p>Commands sent to and replies received from the board.</p></div><button id="clearBtn" class="btn">Clear</button></div><div id="log" class="log">[lab] Ready. Connect the board or use preview mode.</div></article>
+      </div>
+    </section>
+    <div class="foot">Prototype tool — health values are simulated and are not medical measurements.</div>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script>
+    const presets={
+      home:{title:'VEYORU',body:'Your AI, one gesture away.',status:'READY',accent:'#C9FF4B'},
+      assistant:{title:'Ask VEYORU',body:'What should we build today?',status:'LISTENING',accent:'#71E7FF'},
+      result:{title:'Done',body:'I made a focused plan and saved the next step.',status:'AI REPLY',accent:'#C9FF4B'},
+      health:{title:'72 BPM',body:'Heart rhythm looks steady.',status:'HEALTH',accent:'#FF7277'},
+      focus:{title:'24:58',body:'Deep work · notifications muted.',status:'FOCUS',accent:'#D7A7FF'},
+      charge:{title:'82%',body:'About 18 hours remaining.',status:'CHARGING',accent:'#74E5B2'}
+    };
+    let state={screen:'home',title:'VEYORU',body:'Your AI, one gesture away.',status:'READY',heartRate:72,battery:82,accent:'#C9FF4B',listening:false};
+    let port,reader,writer,reading=false;
+    const $=s=>document.querySelector(s), logEl=$('#log');
+    Object.keys(presets).forEach(name=>{const b=document.createElement('button');b.textContent=name[0].toUpperCase()+name.slice(1);b.dataset.screen=name;b.onclick=()=>loadScreen(name,true);$('#screenNav').appendChild(b)});
+    function clamp(v,a,b){return Math.min(b,Math.max(a,Number(v)||0))}
+    function escapeLine(v){return String(v).replace(/[\r\n]+/g,' ').slice(0,160)}
+    function render(){
+      const now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});$('#watchScreen').style.setProperty('--active',state.accent);$('#watchTitle').textContent=state.title;$('#watchBody').textContent=state.body;$('#statusChip').textContent=state.status;$('#hrChip').textContent=`${state.heartRate} BPM`;$('#battery').textContent=`${state.battery}%`;$('#time').textContent=now;$('#centerMeta').textContent=`${now} · ${state.battery}% CHARGE`;$('#orb').classList.toggle('listening',!!state.listening);$('#watchAction').textContent=state.listening?'LISTENING…':(state.screen==='assistant'?'TAP TO LISTEN':'OPEN ASSISTANT');
+      document.querySelectorAll('[data-screen]').forEach(b=>b.classList.toggle('active',b.dataset.screen===state.screen));
+    }
+    function loadScreen(name,sendNow=false){state={...state,...presets[name],screen:name};render();if(sendNow)sendState()}
+    const screenOrder=Object.keys(presets);
+    function nextScreen(dir){const i=screenOrder.indexOf(state.screen);loadScreen(screenOrder[(i+dir+screenOrder.length)%screenOrder.length],true)}
+    function log(msg,type=''){const line=document.createElement('div');line.className=type;line.textContent=msg;logEl.appendChild(line);logEl.scrollTop=logEl.scrollHeight}
+    function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+    function payload(){return {cmd:'render',screen:state.screen,title:escapeLine(state.title),body:escapeLine(state.body),status:escapeLine(state.status),hr:clamp(state.heartRate,30,220),battery:clamp(state.battery,0,100),accent:state.accent}}
+    async function sendObject(obj){if(!writer){log('[preview] '+JSON.stringify(obj),'tx');return false}const line=JSON.stringify(obj)+'\n';await writer.write(new TextEncoder().encode(line));log('→ '+line.trim(),'tx');return true}
+    async function sendState(){const sent=await sendObject(payload());toast(sent?'Sent to ESP32-S3':'Preview updated')}
+    async function askAssistant(text){text=(text||'').trim()||'What should we build today?';state={...state,screen:'assistant',status:'LISTENING',listening:true,body:`Listening…\n“${text}”`,accent:'#71E7FF'};render();await sendState();const endpoint=$('#llmEndpoint').value.trim();let answer='I can help plan that. I made a focused next step for your VEYORU build.';try{if(endpoint){const r=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,screen:state.screen,battery:state.battery})});if(!r.ok)throw new Error(`gateway ${r.status}`);const data=await r.json();answer=data.answer||data.output_text||answer}else await new Promise(r=>setTimeout(r,700))}catch(e){log('[llm] '+e.message+' · using local reply','err')}state={...state,screen:'result',title:'AI reply',body:answer,status:endpoint?'LLM REPLY':'LOCAL REPLY',listening:false,accent:'#C9FF4B'};render();await sendState();toast(endpoint?'LLM response received':'Local assistant demo complete')}
+    async function listen(){if(state.listening)return;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const rec=new SR();rec.lang='en-US';rec.interimResults=false;rec.onresult=e=>askAssistant(e.results[0][0].transcript);rec.onerror=()=>askAssistant($('#askText').value);rec.start();state={...state,screen:'assistant',status:'LISTENING',listening:true,body:'Listening… speak now',accent:'#71E7FF'};render();await sendState()}else await askAssistant($('#askText').value)}
+    async function connect(){
+      if(!('serial' in navigator)){toast('Use desktop Chrome or Edge');return}
+      try{port=await navigator.serial.requestPort();await port.open({baudRate:115200});writer=port.writable.getWriter();setConnected(true);log('[lab] Serial port opened at 115200 baud');readLoop();await sendObject({cmd:'hello',client:'VEYORU Display Lab'});setTimeout(sendState,250)}catch(e){log('[error] '+e.message,'err');toast('Connection cancelled or failed')}
+    }
+    async function disconnect(){
+      try{reading=false;if(reader){await reader.cancel();reader.releaseLock();reader=null}if(writer){writer.releaseLock();writer=null}if(port){await port.close();port=null}}catch(e){log('[error] '+e.message,'err')}setConnected(false)
+    }
+    async function readLoop(){reading=true;const decoder=new TextDecoder();let pending='';while(port?.readable&&reading){reader=port.readable.getReader();try{while(reading){const {value,done}=await reader.read();if(done)break;pending+=decoder.decode(value,{stream:true});const lines=pending.split(/\r?\n/);pending=lines.pop();lines.filter(Boolean).forEach(x=>log('← '+x,'rx'))}}catch(e){if(reading)log('[read error] '+e.message,'err')}finally{reader.releaseLock();reader=null}}}
+    function setConnected(on){$('#dot').classList.toggle('on',on);$('#connectionText').textContent=on?'ESP32-S3 connected':'Preview mode · board not connected';$('#connectBtn').disabled=on;$('#disconnectBtn').disabled=!on;$('#syncBtn').disabled=!on}
+    function parseScript(source){
+      const next={...state};let wantsSend=false;const allowed={screen:v=>{if(presets[v])Object.assign(next,presets[v],{screen:v})},title:v=>next.title=v,body:v=>next.body=v,status:v=>next.status=v,heartRate:v=>next.heartRate=clamp(v,30,220),battery:v=>next.battery=clamp(v,0,100),accent:v=>{if(/^#[0-9a-f]{6}$/i.test(v))next.accent=v}};
+      source.split(/\r?\n/).forEach((raw,i)=>{const line=raw.trim();if(!line||line.startsWith('//'))return;if(/^send\(\);?$/.test(line)){wantsSend=true;return}const m=line.match(/^(screen|title|body|status|heartRate|battery|accent)\((.*)\);?$/);if(!m)throw new Error(`Line ${i+1}: unknown command`);let v=m[2].trim();if(/^['\"].*['\"]$/.test(v))v=v.slice(1,-1).replace(/\\n/g,'\n');else if(!/^-?\d+(\.\d+)?$/.test(v))throw new Error(`Line ${i+1}: use quoted text or a number`);allowed[m[1]](v)});state=next;render();return wantsSend
+    }
+    async function runCode(){try{const wantsSend=parseScript($('#code').value);log('[lab] Script ran successfully');if(wantsSend)await sendState();else toast('Preview updated')}catch(e){log('[script] '+e.message,'err');toast(e.message)}}
+    const quick={hello:'screen("home");\ntitle("Hello from VEYORU");\nbody("USB display link is working.");\nstatus("CONNECTED");\naccent("#C9FF4B");\nsend();',focus:'screen("focus");\ntitle("25:00");\nbody("Deep work · notifications muted.");\nstatus("FOCUS");\naccent("#D7A7FF");\nsend();',health:'screen("health");\ntitle("76 BPM");\nbody("Heart rhythm looks steady.");\nstatus("HEALTH");\nheartRate(76);\naccent("#FF7277");\nsend();',alert:'screen("result");\ntitle("AI reply");\nbody("Your next task is ready. Tap to continue.");\nstatus("COMPLETE");\naccent("#71E7FF");\nsend();'};
+    document.querySelectorAll('[data-quick]').forEach(b=>b.onclick=()=>{$('#code').value=quick[b.dataset.quick];runCode()});
+    $('#connectBtn').onclick=connect;$('#disconnectBtn').onclick=disconnect;$('#syncBtn').onclick=sendState;$('#runBtn').onclick=runCode;$('#clearBtn').onclick=()=>logEl.textContent='';
+    $('#listenBtn').onclick=listen;$('#orb').onclick=()=>state.screen==='assistant'?listen():loadScreen('assistant',true);$('#watchAction').onclick=()=>state.screen==='assistant'?listen():loadScreen('assistant',true);$('#watch').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')listen()});
+    let swipeX=0;$('#watch').addEventListener('pointerdown',e=>{swipeX=e.clientX});$('#watch').addEventListener('pointerup',e=>{const dx=e.clientX-swipeX;if(Math.abs(dx)>45)nextScreen(dx<0?1:-1)});
+    $('#demoBtn').onclick=async()=>{for(const name of ['home','assistant','result','health','focus','charge']){loadScreen(name);await sendState();await new Promise(r=>setTimeout(r,900))}};
+    if(!('serial' in navigator))$('#supportNotice').innerHTML='<b>Web Serial is unavailable.</b> Use desktop Chrome or Edge and open this app from http://localhost.';
+    render();setInterval(render,1000);
+  </script>
+</body>
+</html>
