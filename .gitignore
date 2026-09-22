@@ -3,6 +3,7 @@ firmware/.pio/
 __pycache__/
 *.pyc
 .env
-
+.venv-platformio/
+.platformio-core/
 
 
