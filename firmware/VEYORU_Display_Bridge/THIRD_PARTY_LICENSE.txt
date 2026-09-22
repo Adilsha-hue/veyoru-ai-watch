@@ -1,0 +1,9 @@
+VEYORU display driver note
+---------------------------
+The Waveshare ESP32-S3-Touch-AMOLED-1.43 (SH8601, 466x466) driver files are
+adapted from the MIT-licensed project:
+  thelastoutpostworkshop/waveshare_esp32s3_1.43_amoled_lvgl9
+  https://github.com/thelastoutpostworkshop/waveshare_esp32s3_1.43_amoled_lvgl9
+
+MIT License - keep their copyright header in any vendored driver file.
+Generic ESP32-S3 boards run this bridge in serial-only mode with no driver needed.
