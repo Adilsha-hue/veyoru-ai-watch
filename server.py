@@ -33,6 +33,21 @@ LOCAL_DEMO = (
 )
 
 
+def _offline_answer(text):
+    prompt = text.lower()
+    if "battery" in prompt or "charge" in prompt:
+        return "Battery status is shown at the top of the display."
+    if "time" in prompt or "date" in prompt:
+        return "The live time and date are available on the home screen."
+    if "focus" in prompt or "timer" in prompt:
+        return "Focus mode is ready. Start with one small task."
+    if "hello" in prompt or prompt.startswith("hi"):
+        return "Hello. VEYORU offline assistant is ready."
+    if "help" in prompt:
+        return "Offline I can help with time, battery, focus and simple watch controls."
+    return "I am offline. Connect Wi-Fi for a full AI answer."
+
+
 def _post_json(url, payload, headers=None, timeout=25):
     raw = json.dumps(payload).encode()
     req = Request(url, data=raw, headers={"Content-Type": "application/json", **(headers or {})})
@@ -187,14 +202,14 @@ class Handler(SimpleHTTPRequestHandler):
                     answer = _openai_answer(text, model)
             except (URLError, TimeoutError) as exc:
                 # offline / unreachable -> stay usable with local demo reply
-                answer, mode = LOCAL_DEMO, "local-demo"
+                answer, mode = _offline_answer(text), "offline"
             except (HTTPError, json.JSONDecodeError) as exc:
                 self._json({"answer": "The assistant gateway is unavailable right now.",
                             "mode": "error", "provider": provider, "error": str(exc)}, 502)
                 return
             if not answer:
                 # no key / unreachable -> offline demo so watch interaction still works
-                answer, mode = LOCAL_DEMO, "local-demo"
+                answer, mode = _offline_answer(text), "offline"
             self._json({"answer": answer[:320], "mode": mode, "provider": provider, "model": model})
         except Exception as exc:  # never break the watch UI
             self._json({"answer": "The assistant gateway is unavailable right now.",
@@ -214,7 +229,9 @@ if __name__ == "__main__":
     def opt(name, default):
         return args[args.index(name) + 1] if name in args and args.index(name) + 1 < len(args) else default
     port = int(os.environ.get("PORT", opt("--port", "8000")))
-    host = os.environ.get("HOST", opt("--host", "127.0.0.1"))
+    host = os.environ.get("HOST", opt("--host", "0.0.0.0"))
     print(f"VEYORU lab: http://{host}:{port}/  provider={pick_provider()} model={default_model(pick_provider())}")
     print("Health: http://%s:%d/api/health" % (host, port))
     ThreadingHTTPServer((host, port), Handler).serve_forever()
+
+
