@@ -24,9 +24,10 @@ from urllib.error import HTTPError, URLError
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SYSTEM_PROMPT = (
-    "You are VEYORU, a concise smartwatch assistant. "
-    "Reply in 1-2 short lines, max 160 characters total. "
-    "Plain text only, no markdown, no emoji, no bullet lists."
+    "You are VEYORU, a warm concise smartwatch assistant. "
+    "Reply in 1-2 short lines, max 200 characters total. "
+    "Plain text only, no markdown, no emoji, no bullet lists. "
+    "Use conversation context for follow-ups; if vague, ask one short question."
 )
 LOCAL_DEMO = (
     "I can help with that. Start by defining one small next step, "
@@ -94,7 +95,7 @@ def _groq_answer(text, model, context=""):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": conversation},
             ],
-            "max_tokens": 80,
+            "max_tokens": 100,
             "temperature": 0.6,
         }
     out = _post_json(
@@ -116,7 +117,7 @@ def _gemini_answer(text, model, context=""):
         "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s" % (model, key),
         {"system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
          "contents": [{"parts": [{"text": _conversation_input(text, context)}]}],
-         "generationConfig": {"maxOutputTokens": 80, "temperature": 0.6}},
+         "generationConfig": {"maxOutputTokens": 100, "temperature": 0.6}},
     )
     try:
         parts = out["candidates"][0]["content"]["parts"]
@@ -130,7 +131,7 @@ def _ollama_answer(text, model, context=""):
     out = _post_json(
         base + "/api/generate",
         {"model": model, "prompt": SYSTEM_PROMPT + "\n" + _conversation_input(text, context),
-         "stream": False, "options": {"num_predict": 80, "temperature": 0.6}},
+         "stream": False, "options": {"num_predict": 100, "temperature": 0.6}},
         timeout=60,
     )
     ans = (out.get("response") or "").strip()
@@ -144,7 +145,7 @@ def _openai_answer(text, model, context=""):
     # Responses API (same shape as original server.py)
     out = _post_json(
         "https://api.openai.com/v1/responses",
-        {"model": model, "input": SYSTEM_PROMPT + " " + _conversation_input(text, context), "max_output_tokens": 80},
+        {"model": model, "input": SYSTEM_PROMPT + " " + _conversation_input(text, context), "max_output_tokens": 100},
         {"Authorization": "Bearer " + key},
     )
     answer = out.get("output_text", "")
@@ -235,6 +236,10 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if self.path == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
+            return
         if self.path == "/api/health":
             provider = pick_provider()
             configured, reachable = _backend_status(provider)
@@ -256,7 +261,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         try:
+            import time as _t
+            _t0 = _t.monotonic()
             n = int(self.headers.get("Content-Length", "0"))
+            if n > 16384:
+                self._json({"answer": "Request too large.", "mode": "error"}, 413)
+                return
             data = json.loads(self.rfile.read(n) or b"{}")
             text = str(data.get("text", "")).strip()[:1000] or "What should we build today?"
             context = str(data.get("context", "")).strip()[:1600]
@@ -302,7 +312,8 @@ class Handler(SimpleHTTPRequestHandler):
             if not answer:
                 # no key / unreachable -> offline demo so watch interaction still works
                 answer, mode = _offline_answer(text), "offline"
-            payload = {"answer": answer[:320], "mode": mode, "provider": provider, "model": model}
+            payload = {"answer": answer[:360], "mode": mode, "provider": provider, "model": model,
+                       "elapsed_ms": int((_t.monotonic() - _t0) * 1000)}
             if backend_error:
                 payload["backend_error"] = backend_error
             self._json(payload)
@@ -314,6 +325,7 @@ class Handler(SimpleHTTPRequestHandler):
         raw = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -321,10 +333,15 @@ class Handler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if "--help" in args or "-h" in args:
+        print(__doc__)
+        print("Usage: python3 server.py [--host HOST] [--port PORT]")
+        sys.exit(0)
     def opt(name, default):
         return args[args.index(name) + 1] if name in args and args.index(name) + 1 < len(args) else default
     port = int(os.environ.get("PORT", opt("--port", "8000")))
     host = os.environ.get("HOST", opt("--host", "0.0.0.0"))
-    print(f"VEYORU lab: http://{host}:{port}/  provider={pick_provider()} model={default_model(pick_provider())}")
-    print("Health: http://%s:%d/api/health" % (host, port))
+    shown_host = "localhost" if host == "0.0.0.0" else host
+    print(f"VEYORU lab: http://{shown_host}:{port}/  provider={pick_provider()} model={default_model(pick_provider())}")
+    print("Health: http://%s:%d/api/health" % (shown_host, port))
     ThreadingHTTPServer((host, port), Handler).serve_forever()

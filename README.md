@@ -10,7 +10,7 @@ This package gives you a fast edit-preview-send loop for the Waveshare ESP32-S3 
 - Sends one-line JSON commands to the firmware without reflashing every UI edit.
 - Includes six screen presets: home, assistant, result, health, focus, and charge.
 - Supports live time and charge in the center of the home screen, tap-to-listen, browser speech input when available, and left/right swipe navigation.
-- Includes an optional local `/api/assistant` gateway. The browser never stores an API key; the gateway can call a hosted LLM only when `OPENAI_API_KEY` is set on the computer.
+- Includes an optional local `/api/assistant` gateway. The browser never stores an API key; the gateway calls a hosted LLM when a free key is set (`GROQ_API_KEY` recommended, or `GEMINI_API_KEY`), a local Ollama model when `LLM_PROVIDER=ollama`, or returns an offline demo reply when nothing is configured.
 
 ## First-time setup
 
@@ -23,27 +23,38 @@ This package gives you a fast edit-preview-send loop for the Waveshare ESP32-S3 
 7. Connect the board with a data-capable USB-C cable and upload.
 8. If no port appears the first time: hold BOOT, tap RESET, release BOOT, select the new port, and upload again.
 
-### Prebuilt image (fastest)
+### Prebuilt image (when provided)
 
-The `prebuilt` folder contains:
+If a `prebuilt` folder is present it contains:
 
 - `VEYORU_firmware.factory.bin` — combined bootloader, partition table and application image; flash at address `0x0`.
 - `VEYORU_firmware.bin` — application-only image; flash at address `0x10000` when the matching bootloader and partition table already exist.
 - `VEYORU_firmware.elf` — symbols for debugging and simulators.
 
-The combined image was compiled with Arduino-ESP32 3.3.12 and LVGL 9.2.2 for 16 MB flash and 8 MB OPI PSRAM. The build uses about 656 KB flash and 155 KB internal RAM.
+The combined image is compiled with Arduino-ESP32 3.3.x and LVGL 9.2.2 for 16 MB flash and OPI PSRAM. To build it yourself, use the PlatformIO project in `firmware/` (see below).
 
 To enter download mode, connect the board's own USB-C socket, hold BOOT, tap RESET, then release BOOT. Flash the factory image, then tap RESET once without holding BOOT.
 
-### PlatformIO option
+### PlatformIO option (recommended for the 1.43" AMOLED)
 
-Open the `firmware` directory as a PlatformIO project and run **Build** or **Upload**. The included `platformio.ini` uses the stable pioarduino ESP32 platform and the same LVGL version as the Arduino sketch.
+Open the `firmware` directory as a PlatformIO project and run **Build** or **Upload**. The included `platformio.ini` targets the Waveshare ESP32-S3-Touch-AMOLED-1.43 (SH8601/CO5300 auto-detect, FT3168 touch, PCF85063 RTC) with LVGL 9.2.2, 16 MB flash and OPI PSRAM. The full hybrid assistant (offline alarms/timers/tasks + Wi-Fi cloud fallback) lives in `firmware/src/main.cpp` + `offline_tools.*`.
+
+### Arduino option (serial bridge only)
+
+Open `firmware/VEYORU_Display_Bridge/VEYORU_Display_Bridge.ino` for a minimal USB render bridge without the AMOLED UI. The PlatformIO build above is the one the web lab verifies against (`VEYORU:READY` + `VEYORU:HELLO`).
 
 ## Run the web app
 
 Double-click `start_server.bat`, then open `http://localhost:8000` in desktop Chrome or Edge. Click **Connect ESP32-S3**, choose the board port, and press **Send current screen**.
 
-For a full LLM reply, start the server from PowerShell with ` $env:OPENAI_API_KEY="your-key"; $env:OPENAI_MODEL="gpt-5-mini"; .\start_server.bat `, then enter `http://localhost:8000/api/assistant` in the **LLM gateway** field. If no key is set, the same endpoint returns a local demo reply so the interaction still works offline.
+For a full LLM reply, pick a provider in the page's dropdown (`auto` uses the first
+available free key) and start the server from PowerShell, e.g. for the free Groq
+cloud: ` $env:GROQ_API_KEY="gsk-your-key"; $env:LLM_PROVIDER="groq"; .\start_server.bat `.
+Then keep `http://localhost:8000/api/assistant` in the **LLM gateway** field. If no
+key is set, the same endpoint returns an offline reply so the interaction still
+works. See `.env.example` for Gemini free / Ollama local / OpenAI paid
+options, `GET /api/health` for the active provider, and `WINDOWS_SETUP.md` for the
+full Windows + ESP32-S3 + hotspot workflow.
 
 Do not open `index.html` directly for hardware use. Web Serial requires a secure context; localhost is treated as secure.
 
