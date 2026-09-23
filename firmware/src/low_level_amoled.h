@@ -96,5 +96,3 @@ esp_err_t esp_amoled_new_panel(const esp_lcd_panel_io_handle_t io, const esp_lcd
 }
 #endif
 
-
-

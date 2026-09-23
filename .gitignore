@@ -5,5 +5,5 @@ __pycache__/
 .env
 .venv-platformio/
 .platformio-core/
-
-
+server.stdout.log
+server.stderr.log

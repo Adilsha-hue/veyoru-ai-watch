@@ -17,7 +17,7 @@
 
 // Display controller pins
 #define PIN_NUM_LCD_CS     9
-#define PIN_NUM_LCD_PCLK   10 
+#define PIN_NUM_LCD_PCLK   10
 #define PIN_NUM_LCD_DATA0  11
 #define PIN_NUM_LCD_DATA1  12
 #define PIN_NUM_LCD_DATA2  13
@@ -28,6 +28,7 @@
 #define I2C_ADDR_FT3168 0x38
 #define PIN_NUM_TOUCH_SCL 48
 #define PIN_NUM_TOUCH_SDA 47
+#define PIN_NUM_BAT_ADC 4
 #define I2C_PORT I2C_NUM_0
 #define I2C_FREQUENCY (300 * 1000)
 
@@ -44,5 +45,3 @@
 #define TRANSFER_QUEUE_DEPTH 32     // It’s the SPI device’s queue size; you can raise it until you run out of RAM
 
 #endif
-
-

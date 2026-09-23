@@ -16,6 +16,7 @@ Hotspot/LAN: use --host 0.0.0.0 so phone/watch on same hotspot can reach
 """
 import json
 import os
+import socket
 import sys
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.request import Request, urlopen
@@ -31,6 +32,13 @@ LOCAL_DEMO = (
     "I can help with that. Start by defining one small next step, "
     "then tap the watch again when you are ready."
 )
+
+
+def _conversation_input(text, context=""):
+    context = str(context or "").strip()[:1600]
+    if not context:
+        return text
+    return "Recent conversation:\n%s\nCurrent user: %s" % (context, text)
 
 
 def _offline_answer(text):
@@ -50,21 +58,48 @@ def _offline_answer(text):
 
 def _post_json(url, payload, headers=None, timeout=25):
     raw = json.dumps(payload).encode()
-    req = Request(url, data=raw, headers={"Content-Type": "application/json", **(headers or {})})
+    # Cloudflare rejects Python urllib's default User-Agent with error 1010.
+    # Identify this gateway explicitly so requests reach the provider API.
+    req = Request(url, data=raw, headers={
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "VEYORU/1.0",
+        **(headers or {}),
+    })
     with urlopen(req, timeout=timeout) as res:
         return json.loads(res.read() or b"{}")
 
 
-def _groq_answer(text, model):
+def _groq_answer(text, model, context=""):
     key = os.environ.get("GROQ_API_KEY", "").strip()
     if not key:
         return None
+    conversation = _conversation_input(text, context)
+    if model.startswith("openai/gpt-oss-"):
+        # GPT-OSS spends output tokens on reasoning. Hide that reasoning, use a
+        # larger completion budget, and put instructions in the user message as
+        # recommended by Groq for these models.
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": SYSTEM_PROMPT + "\n\n" + conversation}],
+            "max_completion_tokens": 256,
+            "temperature": 0.6,
+            "reasoning_effort": "low",
+            "include_reasoning": False,
+        }
+    else:
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": conversation},
+            ],
+            "max_tokens": 80,
+            "temperature": 0.6,
+        }
     out = _post_json(
         "https://api.groq.com/openai/v1/chat/completions",
-        {"model": model, "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text}],
-         "max_tokens": 80, "temperature": 0.6},
+        payload,
         {"Authorization": "Bearer " + key},
     )
     try:
@@ -73,14 +108,14 @@ def _groq_answer(text, model):
         return None
 
 
-def _gemini_answer(text, model):
+def _gemini_answer(text, model, context=""):
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not key:
         return None
     out = _post_json(
         "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s" % (model, key),
         {"system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-         "contents": [{"parts": [{"text": text}]}],
+         "contents": [{"parts": [{"text": _conversation_input(text, context)}]}],
          "generationConfig": {"maxOutputTokens": 80, "temperature": 0.6}},
     )
     try:
@@ -90,11 +125,11 @@ def _gemini_answer(text, model):
         return None
 
 
-def _ollama_answer(text, model):
+def _ollama_answer(text, model, context=""):
     base = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
     out = _post_json(
         base + "/api/generate",
-        {"model": model, "prompt": SYSTEM_PROMPT + "\nUser: " + text,
+        {"model": model, "prompt": SYSTEM_PROMPT + "\n" + _conversation_input(text, context),
          "stream": False, "options": {"num_predict": 80, "temperature": 0.6}},
         timeout=60,
     )
@@ -102,14 +137,14 @@ def _ollama_answer(text, model):
     return ans or None
 
 
-def _openai_answer(text, model):
+def _openai_answer(text, model, context=""):
     key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not key:
         return None
     # Responses API (same shape as original server.py)
     out = _post_json(
         "https://api.openai.com/v1/responses",
-        {"model": model, "input": SYSTEM_PROMPT + " User: " + text, "max_output_tokens": 80},
+        {"model": model, "input": SYSTEM_PROMPT + " " + _conversation_input(text, context), "max_output_tokens": 80},
         {"Authorization": "Bearer " + key},
     )
     answer = out.get("output_text", "")
@@ -148,6 +183,37 @@ def default_model(provider):
     }.get(provider, "local-demo")
 
 
+def _lan_ips():
+    """Return private/LAN IPv4 addresses suitable for the watch, never localhost."""
+    addresses = set()
+    try:
+        for item in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            address = item[4][0]
+            if not address.startswith(("127.", "169.254.")):
+                addresses.add(address)
+    except OSError:
+        pass
+    return sorted(addresses)
+
+
+def _backend_status(provider):
+    """Report configuration separately from verified request-time availability."""
+    configured = {
+        "groq": bool(os.environ.get("GROQ_API_KEY", "").strip()),
+        "gemini": bool(os.environ.get("GEMINI_API_KEY", "").strip()),
+        "openai": bool(os.environ.get("OPENAI_API_KEY", "").strip()),
+        "local": True,
+    }.get(provider, False)
+    if provider != "ollama":
+        return configured, None
+    base = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+    try:
+        with urlopen(base + "/api/tags", timeout=2) as response:
+            return True, 200 <= response.status < 300
+    except (OSError, URLError, TimeoutError):
+        return True, False
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=ROOT, **kwargs)
@@ -171,7 +237,14 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/api/health":
             provider = pick_provider()
+            configured, reachable = _backend_status(provider)
+            port = self.server.server_address[1]
             self._json({"ok": True, "provider": provider, "model": default_model(provider),
+                        "online_ready": configured and reachable is not False,
+                        "backend_configured": configured,
+                        "backend_reachable": reachable,
+                        "board_assistant_urls": ["http://%s:%d/api/assistant" % (ip, port)
+                                                 for ip in _lan_ips()],
                         "has_groq": bool(os.environ.get("GROQ_API_KEY")),
                         "has_gemini": bool(os.environ.get("GEMINI_API_KEY")),
                         "has_openai": bool(os.environ.get("OPENAI_API_KEY"))})
@@ -186,31 +259,53 @@ class Handler(SimpleHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", "0"))
             data = json.loads(self.rfile.read(n) or b"{}")
             text = str(data.get("text", "")).strip()[:1000] or "What should we build today?"
+            context = str(data.get("context", "")).strip()[:1600]
             provider = pick_provider()
             if str(data.get("provider", "")).strip().lower() in ("groq", "gemini", "ollama", "openai", "local"):
                 provider = data["provider"].strip().lower()
             model = str(data.get("model", "")).strip() or default_model(provider)
             answer, mode = None, provider
+            backend_error = None
             try:
                 if provider == "groq":
-                    answer = _groq_answer(text, model)
+                    answer = _groq_answer(text, model, context)
                 elif provider == "gemini":
-                    answer = _gemini_answer(text, model)
+                    answer = _gemini_answer(text, model, context)
                 elif provider == "ollama":
-                    answer = _ollama_answer(text, model)
+                    answer = _ollama_answer(text, model, context)
                 elif provider == "openai":
-                    answer = _openai_answer(text, model)
+                    answer = _openai_answer(text, model, context)
+            except HTTPError as exc:
+                # HTTPError subclasses URLError, so handle it first or useful
+                # provider details (invalid key, model access, quota) are lost.
+                try:
+                    detail = json.loads(exc.read().decode("utf-8", "replace"))
+                    detail = detail.get("error", detail)
+                    if isinstance(detail, dict):
+                        detail = detail.get("message") or detail.get("code") or str(detail)
+                    detail = str(detail)[:240]
+                except Exception:
+                    detail = str(exc.reason or exc)[:240]
+                backend_error = "HTTP %d: %s" % (exc.code, detail)
+                answer, mode = _offline_answer(text), "offline"
+                sys.stderr.write("assistant backend rejected request: %s\n" % backend_error)
             except (URLError, TimeoutError) as exc:
                 # offline / unreachable -> stay usable with local demo reply
                 answer, mode = _offline_answer(text), "offline"
-            except (HTTPError, json.JSONDecodeError) as exc:
+                reason = getattr(exc, "reason", exc)
+                backend_error = "%s: %s" % (type(reason).__name__, reason)
+                sys.stderr.write("assistant backend unavailable: %s\n" % backend_error)
+            except json.JSONDecodeError as exc:
                 self._json({"answer": "The assistant gateway is unavailable right now.",
                             "mode": "error", "provider": provider, "error": str(exc)}, 502)
                 return
             if not answer:
                 # no key / unreachable -> offline demo so watch interaction still works
                 answer, mode = _offline_answer(text), "offline"
-            self._json({"answer": answer[:320], "mode": mode, "provider": provider, "model": model})
+            payload = {"answer": answer[:320], "mode": mode, "provider": provider, "model": model}
+            if backend_error:
+                payload["backend_error"] = backend_error
+            self._json(payload)
         except Exception as exc:  # never break the watch UI
             self._json({"answer": "The assistant gateway is unavailable right now.",
                         "mode": "error", "error": str(exc)}, 502)
@@ -233,5 +328,3 @@ if __name__ == "__main__":
     print(f"VEYORU lab: http://{host}:{port}/  provider={pick_provider()} model={default_model(pick_provider())}")
     print("Health: http://%s:%d/api/health" % (host, port))
     ThreadingHTTPServer((host, port), Handler).serve_forever()
-
-

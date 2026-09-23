@@ -24,4 +24,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "VEYORU firmware uploaded successfully."
-

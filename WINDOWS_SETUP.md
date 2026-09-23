@@ -61,5 +61,3 @@ The API key stays on the laptop. Do not put a Groq/OpenAI key in ESP firmware.
 - Website stays black = connect the board and accept the Web Serial port picker.
 - Board says `VEYORU:WIFI failed` = verify hotspot SSID/password and use a 2.4 GHz-compatible hotspot.
 - Cloud fails but offline works = verify the laptop and board are on the same hotspot and use the laptop IPv4 address, never `localhost`, in the board server field.
-
-

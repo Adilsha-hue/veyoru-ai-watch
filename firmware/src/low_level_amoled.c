@@ -502,5 +502,3 @@ uint8_t read_lcd_id(void)
   ESP_LOGI("lcd_Model","0x%02x",ret);
   return ret;
 }
-
-
