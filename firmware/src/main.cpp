@@ -560,6 +560,7 @@ static void runOfflineAssistant(const String &line) {
   String requestedMode = jsonString(line, "mode", "auto");
   requestedMode.toLowerCase();
   bool forceOffline = requestedMode == "offline";
+  bool forceCloud = requestedMode == "cloud";
   String normalized = prompt;
   normalized.toLowerCase();
   normalized.trim();
@@ -606,9 +607,12 @@ static void runOfflineAssistant(const String &line) {
   }
   String priorContext = conversationContext();
   String localAnswer;
-  bool handledOffline = offlineTools.handle(prompt, uiBattery, uiHeartRate,
-                                             WiFi.status() == WL_CONNECTED, powerLabel, localAnswer);
-  if (!handledOffline) localAnswer = offlineReply(prompt, &handledOffline);
+  bool handledOffline = false;
+  if (!forceCloud) {
+    handledOffline = offlineTools.handle(prompt, uiBattery, uiHeartRate,
+                                         WiFi.status() == WL_CONNECTED, powerLabel, localAnswer);
+    if (!handledOffline) localAnswer = offlineReply(prompt, &handledOffline);
+  }
   if (forceOffline && !handledOffline) {
     handledOffline = true;
     localAnswer = "That question needs online AI. Offline I can manage alarms, timers, reminders, tasks, time, power, and watch status.";
