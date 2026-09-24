@@ -17,6 +17,7 @@ lv_color_t *drawBuffer2 = nullptr;
 lv_obj_t *timeLabel;
 lv_obj_t *batteryLabel;
 lv_obj_t *orb;
+lv_obj_t *orbGlyphLabel;
 lv_obj_t *titleLabel;
 lv_obj_t *bodyLabel;
 lv_obj_t *statusLabel;
@@ -171,30 +172,27 @@ static int hrToRing(int bpm) {
   return 8 + (bpm - 30) * 92 / 190;
 }
 
-static lv_obj_t *makeMetricRing(lv_obj_t *parent, int x, const char *caption, int value, lv_obj_t **arcOut) {
-  lv_obj_t *ring = lv_arc_create(parent);
-  lv_obj_set_size(ring, 104, 104);
-  lv_obj_align(ring, LV_ALIGN_CENTER, x, 48);
-  lv_arc_set_rotation(ring, 135);
-  lv_arc_set_bg_angles(ring, 0, 270);
-  lv_arc_set_range(ring, 0, 100);
-  lv_arc_set_value(ring, value);
-  lv_obj_remove_style(ring, nullptr, LV_PART_KNOB);
-  lv_obj_set_style_arc_width(ring, 6, LV_PART_MAIN);
-  lv_obj_set_style_arc_color(ring, lv_color_hex(0x12352B), LV_PART_MAIN);
-  lv_obj_set_style_arc_width(ring, 6, LV_PART_INDICATOR);
-  lv_obj_set_style_arc_color(ring, lv_color_hex(0x35F2A1), LV_PART_INDICATOR);
-  lv_obj_clear_flag(ring, LV_OBJ_FLAG_CLICKABLE);
+static lv_obj_t *makeMetricPill(lv_obj_t *parent, int x, const char *caption, lv_obj_t **arcOut) {
+  lv_obj_t *pill = lv_obj_create(parent);
+  lv_obj_set_size(pill, 98, 46);
+  lv_obj_align(pill, LV_ALIGN_CENTER, x, -39);
+  lv_obj_set_style_radius(pill, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_bg_color(pill, lv_color_hex(0x09100C), 0);
+  lv_obj_set_style_bg_opa(pill, LV_OPA_COVER, 0);
+  lv_obj_set_style_border_color(pill, lv_color_hex(0x20382C), 0);
+  lv_obj_set_style_border_width(pill, 1, 0);
+  lv_obj_set_style_pad_all(pill, 0, 0);
+  lv_obj_clear_flag(pill, LV_OBJ_FLAG_SCROLLABLE);
 
-  lv_obj_t *label = lv_label_create(ring);
+  lv_obj_t *label = lv_label_create(pill);
   lv_label_set_text(label, caption);
-  lv_obj_set_width(label, 84);
+  lv_obj_set_width(label, 92);
   lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(label, lv_color_hex(0xE8FFF5), 0);
   lv_obj_center(label);
-  if (arcOut) *arcOut = ring;
+  if (arcOut) *arcOut = nullptr;
   return label;
 }
 
@@ -223,13 +221,13 @@ static void createUi() {
   lv_obj_set_style_text_font(dateLabel, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_letter_space(dateLabel, 3, 0);
   lv_obj_set_style_text_color(dateLabel, lv_color_hex(0x65B892), 0);
-  lv_obj_align(dateLabel, LV_ALIGN_TOP_MID, 0, 52);
+  lv_obj_align(dateLabel, LV_ALIGN_TOP_MID, 0, 65);
 
   timeLabel = lv_label_create(homeLayer);
   lv_label_set_text(timeLabel, "10:09");
   lv_obj_set_style_text_font(timeLabel, &lv_font_montserrat_36, 0);
   lv_obj_set_style_text_color(timeLabel, lv_color_hex(0xF4FFF9), 0);
-  lv_obj_align(timeLabel, LV_ALIGN_TOP_MID, 0, 71);
+  lv_obj_align(timeLabel, LV_ALIGN_TOP_MID, 0, 85);
 
   batteryLabel = lv_label_create(homeLayer);
   lv_label_set_text(batteryLabel, "82%");
@@ -244,18 +242,27 @@ static void createUi() {
   lv_obj_set_style_pad_ver(batteryLabel, 6, 0);
   lv_obj_align(batteryLabel, LV_ALIGN_TOP_RIGHT, -76, 22);
 
-  hrLabel = makeMetricRing(homeLayer, -120, "72\nHEART", hrToRing(72), &hrArc);
-  activityLabel = makeMetricRing(homeLayer, 0, "68%\nMOVE", 68, &moveArc);
-  stepsLabel = makeMetricRing(homeLayer, 120, "8.6K\nSTEPS", 86, &stepsArc);
+  hrLabel = makeMetricPill(homeLayer, -108, "72 BPM", &hrArc);
+  activityLabel = makeMetricPill(homeLayer, 0, "MOVE 68%", &moveArc);
+  stepsLabel = makeMetricPill(homeLayer, 108, "8.6K STEPS", &stepsArc);
+
+  lv_obj_t *engineStatus = lv_label_create(homeLayer);
+  lv_label_set_text(engineStatus, "ON-DEVICE AI READY  ·  DEMO SENSORS");
+  lv_obj_set_width(engineStatus, 330);
+  lv_obj_set_style_text_align(engineStatus, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_font(engineStatus, &lv_font_montserrat_14, 0);
+  lv_obj_set_style_text_letter_space(engineStatus, 1, 0);
+  lv_obj_set_style_text_color(engineStatus, lv_color_hex(0x6EAA8C), 0);
+  lv_obj_align(engineStatus, LV_ALIGN_TOP_MID, 0, 244);
 
   lv_obj_t *wave1 = lv_obj_create(homeLayer);
-  lv_obj_set_size(wave1, 380, 84);
-  lv_obj_align(wave1, LV_ALIGN_BOTTOM_MID, 0, -31);
+  lv_obj_set_size(wave1, 340, 68);
+  lv_obj_align(wave1, LV_ALIGN_BOTTOM_MID, 0, -18);
   lv_obj_set_style_radius(wave1, LV_RADIUS_CIRCLE, 0);
   lv_obj_set_style_bg_color(wave1, lv_color_hex(0x0A3B2A), 0);
   lv_obj_set_style_bg_opa(wave1, LV_OPA_70, 0);
   lv_obj_set_style_border_color(wave1, lv_color_hex(0x26E89A), 0);
-  lv_obj_set_style_border_width(wave1, 1, 0);
+  lv_obj_set_style_border_width(wave1, 0, 0);
   lv_obj_clear_flag(wave1, LV_OBJ_FLAG_SCROLLABLE);
 
   lv_obj_t *homeAction = lv_label_create(homeLayer);
@@ -263,7 +270,7 @@ static void createUi() {
   lv_obj_set_style_text_font(homeAction, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_letter_space(homeAction, 2, 0);
   lv_obj_set_style_text_color(homeAction, lv_color_hex(0x7CFFD0), 0);
-  lv_obj_align(homeAction, LV_ALIGN_BOTTOM_MID, 0, -61);
+  lv_obj_align(homeAction, LV_ALIGN_BOTTOM_MID, 0, -49);
 
   lv_obj_t *assistantDot = lv_obj_create(assistantLayer);
   lv_obj_set_size(assistantDot, 10, 10);
@@ -294,6 +301,12 @@ static void createUi() {
   lv_obj_set_style_shadow_opa(orb, LV_OPA_30, 0);
   lv_obj_align(orb, LV_ALIGN_TOP_MID, 0, 92);
   lv_obj_clear_flag(orb, LV_OBJ_FLAG_SCROLLABLE);
+
+  orbGlyphLabel = lv_label_create(orb);
+  lv_label_set_text(orbGlyphLabel, "AI");
+  lv_obj_set_style_text_font(orbGlyphLabel, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_color(orbGlyphLabel, lv_color_hex(0xF4FFF9), 0);
+  lv_obj_center(orbGlyphLabel);
 
   statusLabel = makeChip(assistantLayer, 0);
   lv_label_set_text(statusLabel, "LISTENING");
@@ -393,19 +406,25 @@ static void refreshUiFromState() {
   lv_label_set_text(titleLabel, uiTitle.c_str());
   lv_label_set_text(bodyLabel, uiBody.c_str());
   lv_label_set_text(statusLabel, uiStatus.c_str());
-  lv_label_set_text_fmt(hrLabel, "%d\nHEART", uiHeartRate);
+  lv_label_set_text_fmt(hrLabel, "%d BPM", uiHeartRate);
   if (hrArc) lv_arc_set_value(hrArc, hrToRing(uiHeartRate));
   if (moveArc) lv_arc_set_value(moveArc, uiMove);
   if (stepsArc) lv_arc_set_value(stepsArc, constrain(uiSteps * 100 / 10000, 0, 100));
-  lv_label_set_text_fmt(activityLabel, "%d%%\nMOVE", uiMove);
+  lv_label_set_text_fmt(activityLabel, "MOVE %d%%", uiMove);
   char stepsText[12];
   if (uiSteps >= 1000) {
     snprintf(stepsText, sizeof(stepsText), "%.1fK", uiSteps / 1000.0f);
   } else {
     snprintf(stepsText, sizeof(stepsText), "%d", uiSteps);
   }
-  lv_label_set_text_fmt(stepsLabel, "%s\nSTEPS", stepsText);
+  lv_label_set_text_fmt(stepsLabel, "%s STEPS", stepsText);
   lv_label_set_text(batteryLabel, powerLabel.c_str());
+  const char *glyph = "AI";
+  if (uiScreen == "result") glyph = "OK";
+  else if (uiScreen == "health") glyph = "BPM";
+  else if (uiScreen == "focus") glyph = "FOCUS";
+  else if (uiScreen == "charge") glyph = "%";
+  if (orbGlyphLabel) lv_label_set_text(orbGlyphLabel, glyph);
   lv_obj_set_style_bg_color(orb, lv_color_hex(accent), 0);
   lv_obj_set_style_border_color(orb, lv_color_hex(accent), 0);
   lv_obj_set_style_shadow_color(orb, lv_color_hex(accent), 0);
