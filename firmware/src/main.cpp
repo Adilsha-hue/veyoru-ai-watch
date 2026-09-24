@@ -302,9 +302,10 @@ static void createUi() {
   bodyLabel = lv_label_create(assistantLayer);
   lv_label_set_text(bodyLabel, "Tap or ask a question. This conversation stays open.");
   lv_obj_set_width(bodyLabel, 350);
-  lv_label_set_long_mode(bodyLabel, LV_LABEL_LONG_WRAP);
+  lv_obj_set_height(bodyLabel, 108);
+  lv_label_set_long_mode(bodyLabel, LV_LABEL_LONG_DOT);
   lv_obj_set_style_text_align(bodyLabel, LV_TEXT_ALIGN_CENTER, 0);
-  lv_obj_set_style_text_font(bodyLabel, &lv_font_montserrat_18, 0);
+  lv_obj_set_style_text_font(bodyLabel, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(bodyLabel, lv_color_hex(0xB1BBB3), 0);
   lv_obj_align(bodyLabel, LV_ALIGN_CENTER, 0, 105);
 
@@ -503,7 +504,8 @@ static AssistantReply cloudReply(const String &prompt, const String &context) {
   AssistantReply reply;
   if (WiFi.status() != WL_CONNECTED || cloudServerUrl.length() == 0) return reply;
   HTTPClient http;
-  http.setTimeout(15000);
+  http.setConnectTimeout(5000);
+  http.setTimeout(12000);
   if (!http.begin(cloudServerUrl)) {
     reply.mode = "error";
     return reply;
@@ -598,7 +600,7 @@ static void runOfflineAssistant(const String &line) {
     rememberTurn(prompt, answer);
     uiScreen = "assistant";
     uiTitle = "Offline AI";
-    uiBody = "YOU: " + prompt + "\n\nVEYORU: " + answer;
+    uiBody = "YOU: " + prompt.substring(0, 70) + "\n\nVEYORU: " + answer.substring(0, 190);
     uiStatus = "OFFLINE AI";
     accent = 0xD7A7FF;
     refreshUiFromState();
@@ -611,7 +613,7 @@ static void runOfflineAssistant(const String &line) {
     rememberTurn(prompt, answer);
     uiScreen = "assistant";
     uiTitle = "Offline AI";
-    uiBody = "YOU: " + prompt + "\n\nVEYORU: " + answer;
+    uiBody = "YOU: " + prompt.substring(0, 70) + "\n\nVEYORU: " + answer.substring(0, 190);
     uiStatus = "OFFLINE AI";
     accent = 0xD7A7FF;
     refreshUiFromState();
@@ -634,10 +636,10 @@ static void runOfflineAssistant(const String &line) {
   AssistantReply reply;
   if (!handledOffline) {
     // Show thinking immediately so the round face never looks frozen
-    // during the cloud round-trip (gateway timeout is 15s max).
+    // during the cloud round-trip (gateway timeout is 12s max).
     uiScreen = "assistant";
     uiTitle = "VEYORU AI";
-    uiBody = "YOU: " + prompt.substring(0, 90) + "\n\nVEYORU: Thinking…";
+    uiBody = "YOU: " + prompt.substring(0, 70) + "\n\nVEYORU: Thinking…";
     uiStatus = "THINKING";
     accent = 0x35F2A1;
     refreshUiFromState();
@@ -652,7 +654,7 @@ static void runOfflineAssistant(const String &line) {
   uiScreen = "assistant";
   uiTitle = cloud ? "Cloud AI" : "Offline AI";
   rememberTurn(prompt, answer);
-  uiBody = "YOU: " + prompt.substring(0, 90) + "\n\nVEYORU: " + answer;
+  uiBody = "YOU: " + prompt.substring(0, 70) + "\n\nVEYORU: " + answer.substring(0, 190);
   uiStatus = cloud ? "CLOUD AI" : "OFFLINE AI";
   refreshUiFromState();
   reportUiState();
