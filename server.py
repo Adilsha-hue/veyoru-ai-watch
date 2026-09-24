@@ -2,7 +2,7 @@
 
 Providers (env LLM_PROVIDER=auto|groq|gemini|ollama|openai|local):
   groq   - GROQ_API_KEY, LLM_MODEL or GROQ_MODEL (default llama-3.1-8b-instant) FREE
-  gemini - GEMINI_API_KEY, LLM_MODEL or GEMINI_MODEL (default gemini-2.5-flash-lite) FREE
+  gemini - GEMINI_API_KEY, LLM_MODEL or GEMINI_MODEL (default gemini-3.5-flash-lite) FREE
   ollama - OLLAMA_URL (default http://localhost:11434), LLM_MODEL or OLLAMA_MODEL (default llama3.2:3b) FREE/local
   openai - OPENAI_API_KEY, LLM_MODEL or OPENAI_MODEL (default gpt-5-mini) PAID
   local  - always offline demo reply, no key needed
@@ -178,7 +178,7 @@ def pick_provider():
 def default_model(provider):
     return {
         "groq": os.environ.get("LLM_MODEL") or os.environ.get("GROQ_MODEL") or "llama-3.1-8b-instant",
-        "gemini": os.environ.get("LLM_MODEL") or os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash-lite",
+        "gemini": os.environ.get("LLM_MODEL") or os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite",
         "ollama": os.environ.get("LLM_MODEL") or os.environ.get("OLLAMA_MODEL") or "llama3.2:3b",
         "openai": os.environ.get("LLM_MODEL") or os.environ.get("OPENAI_MODEL") or "gpt-5-mini",
     }.get(provider, "local-demo")
