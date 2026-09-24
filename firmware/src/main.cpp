@@ -242,9 +242,9 @@ static void createUi() {
   lv_obj_set_style_pad_ver(batteryLabel, 6, 0);
   lv_obj_align(batteryLabel, LV_ALIGN_TOP_RIGHT, -76, 22);
 
-  hrLabel = makeMetricPill(homeLayer, -108, "72 BPM", &hrArc);
-  activityLabel = makeMetricPill(homeLayer, 0, "MOVE 68%", &moveArc);
-  stepsLabel = makeMetricPill(homeLayer, 108, "8.6K STEPS", &stepsArc);
+  hrLabel = makeMetricPill(homeLayer, -58, "72 BPM", &hrArc);
+  activityLabel = nullptr;
+  stepsLabel = makeMetricPill(homeLayer, 58, "8.6K STEPS", &stepsArc);
 
   lv_obj_t *engineStatus = lv_label_create(homeLayer);
   lv_label_set_text(engineStatus, "ON-DEVICE AI READY  ·  DEMO SENSORS");
@@ -264,6 +264,7 @@ static void createUi() {
   lv_obj_set_style_border_color(wave1, lv_color_hex(0x26E89A), 0);
   lv_obj_set_style_border_width(wave1, 0, 0);
   lv_obj_clear_flag(wave1, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_flag(wave1, LV_OBJ_FLAG_HIDDEN);
 
   lv_obj_t *homeAction = lv_label_create(homeLayer);
   lv_label_set_text(homeAction, "ASK VEYORU");
@@ -410,7 +411,7 @@ static void refreshUiFromState() {
   if (hrArc) lv_arc_set_value(hrArc, hrToRing(uiHeartRate));
   if (moveArc) lv_arc_set_value(moveArc, uiMove);
   if (stepsArc) lv_arc_set_value(stepsArc, constrain(uiSteps * 100 / 10000, 0, 100));
-  lv_label_set_text_fmt(activityLabel, "MOVE %d%%", uiMove);
+  if (activityLabel) lv_label_set_text_fmt(activityLabel, "MOVE %d%%", uiMove);
   char stepsText[12];
   if (uiSteps >= 1000) {
     snprintf(stepsText, sizeof(stepsText), "%.1fK", uiSteps / 1000.0f);
