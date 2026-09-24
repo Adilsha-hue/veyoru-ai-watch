@@ -188,6 +188,8 @@ static lv_obj_t *makeMetricRing(lv_obj_t *parent, int x, const char *caption, in
 
   lv_obj_t *label = lv_label_create(ring);
   lv_label_set_text(label, caption);
+  lv_obj_set_width(label, 84);
+  lv_label_set_long_mode(label, LV_LABEL_LONG_CLIP);
   lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
   lv_obj_set_style_text_color(label, lv_color_hex(0xE8FFF5), 0);
@@ -242,9 +244,9 @@ static void createUi() {
   lv_obj_set_style_pad_ver(batteryLabel, 6, 0);
   lv_obj_align(batteryLabel, LV_ALIGN_TOP_RIGHT, -76, 22);
 
-  hrLabel = makeMetricRing(homeLayer, -120, "HR\n72", hrToRing(72), &hrArc);
-  activityLabel = makeMetricRing(homeLayer, 0, "MOVE\n68", 68, &moveArc);
-  stepsLabel = makeMetricRing(homeLayer, 120, "STEPS\n8560", 86, &stepsArc);
+  hrLabel = makeMetricRing(homeLayer, -120, "72\nHEART", hrToRing(72), &hrArc);
+  activityLabel = makeMetricRing(homeLayer, 0, "68%\nMOVE", 68, &moveArc);
+  stepsLabel = makeMetricRing(homeLayer, 120, "8.6K\nSTEPS", 86, &stepsArc);
 
   lv_obj_t *wave1 = lv_obj_create(homeLayer);
   lv_obj_set_size(wave1, 380, 84);
@@ -370,6 +372,12 @@ static void reportUiState() {
 }
 
 static void refreshUiFromState() {
+  // Keep every metric bounded and display-safe even if a remote renderer sends
+  // malformed or fractional-looking data.
+  uiHeartRate = constrain(uiHeartRate, 30, 220);
+  uiBattery = constrain(uiBattery, 0, 100);
+  uiSteps = constrain(uiSteps, 0, 99999);
+  uiMove = constrain(uiMove, 0, 100);
   // Home keeps the activity rings. Every other screen (assistant, result,
   // health, focus, charge) shows its title/body on the message layer so no
   // render state is ever silently dropped on the round face.
@@ -384,12 +392,18 @@ static void refreshUiFromState() {
   lv_label_set_text(titleLabel, uiTitle.c_str());
   lv_label_set_text(bodyLabel, uiBody.c_str());
   lv_label_set_text(statusLabel, uiStatus.c_str());
-  lv_label_set_text_fmt(hrLabel, "HR\n%d", uiHeartRate);
+  lv_label_set_text_fmt(hrLabel, "%d\nHEART", uiHeartRate);
   if (hrArc) lv_arc_set_value(hrArc, hrToRing(uiHeartRate));
   if (moveArc) lv_arc_set_value(moveArc, uiMove);
   if (stepsArc) lv_arc_set_value(stepsArc, constrain(uiSteps * 100 / 10000, 0, 100));
-  lv_label_set_text_fmt(activityLabel, "MOVE\n%d", uiMove);
-  lv_label_set_text_fmt(stepsLabel, "STEPS\n%d", uiSteps);
+  lv_label_set_text_fmt(activityLabel, "%d%%\nMOVE", uiMove);
+  char stepsText[12];
+  if (uiSteps >= 1000) {
+    snprintf(stepsText, sizeof(stepsText), "%.1fK", uiSteps / 1000.0f);
+  } else {
+    snprintf(stepsText, sizeof(stepsText), "%d", uiSteps);
+  }
+  lv_label_set_text_fmt(stepsLabel, "%s\nSTEPS", stepsText);
   lv_label_set_text(batteryLabel, powerLabel.c_str());
   lv_obj_set_style_bg_color(orb, lv_color_hex(accent), 0);
   lv_obj_set_style_border_color(orb, lv_color_hex(accent), 0);
